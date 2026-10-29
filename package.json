@@ -1,0 +1,28 @@
+{
+  "name": "cyber-commando-2d",
+  "version": "1.0.0",
+  "description": "Videojuego Shooter / Plataforma 2D futurista y militar con Node.js, Express y Canvas HTML5",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "game",
+    "shooter",
+    "platformer",
+    "2d",
+    "canvas",
+    "express"
+  ],
+  "author": "Tech Lead & Pro Developer",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

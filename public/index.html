@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBER COMMANDO: 2D Tactical Platformer</title>
+  <!-- Tipografías Sci-Fi Futuristas -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Contenedor Principal del Juego -->
+  <div id="game-container">
+    <canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+    <!-- Superposición HUD durante la partida -->
+    <div id="hud-overlay" class="hud-screen hidden">
+      <div class="hud-top">
+        <div class="hud-panel health-panel">
+          <div class="panel-label">HP // INTEGRIDAD</div>
+          <div class="bar-container">
+            <div id="health-bar" class="health-fill" style="width: 100%;"></div>
+          </div>
+          <div id="health-text" class="bar-digits">100 / 100</div>
+        </div>
+
+        <div class="hud-panel lives-panel">
+          <div class="panel-label">VIDAS REESTABLECIDAS</div>
+          <div id="lives-display" class="lives-icons">
+            <span class="life-node active">▲</span>
+            <span class="life-node active">▲</span>
+            <span class="life-node active">▲</span>
+          </div>
+        </div>
+
+        <div class="hud-panel score-panel">
+          <div class="panel-label">PUNTAJE MILITAR</div>
+          <div id="score-text" class="score-digits">000000</div>
+        </div>
+
+        <div class="hud-panel level-panel">
+          <div class="panel-label">MISIÓN / SECTOR</div>
+          <div id="level-text" class="sector-digits">NIVEL 1 - TRINCHERAS</div>
+        </div>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="hud-panel weapon-panel">
+          <div class="weapon-header">
+            <span id="weapon-name" class="weapon-title">PISTOLA TÁCTICA</span>
+            <span id="ammo-status" class="ammo-digits">∞ / ∞</span>
+          </div>
+          <div class="bar-container mini">
+            <div id="reload-bar" class="reload-fill" style="width: 0%;"></div>
+          </div>
+          <div id="weapon-slots" class="weapon-slots-grid">
+            <!-- Ranuras 1 a 5 generadas por JS -->
+          </div>
+        </div>
+
+        <div class="hud-panel sound-toggle-panel">
+          <button id="btn-sound-toggle" class="btn-tech-icon" title="Silenciar / Activar Audio">
+            <span id="sound-icon">🔊</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de vida del Jefe (visible solo en combate contra Boss) -->
+      <div id="boss-hud" class="boss-panel hidden">
+        <div class="boss-label">ALERTA AMENAZA CLASE OMEGA: <span id="boss-name">TITÁN APLASTADOR</span></div>
+        <div class="bar-container boss-bar-container">
+          <div id="boss-health-bar" class="boss-health-fill" style="width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menú Principal -->
+    <div id="menu-screen" class="ui-screen active">
+      <div class="ui-modal terminal-frame">
+        <div class="scanline"></div>
+        <div class="terminal-header">
+          <span class="badge">SEC-SYS v2.4</span>
+          <span class="status-dot"></span> EN LÍNEA
+        </div>
+        <h1 class="game-title">CYBER<span class="accent-cyan">COMMANDO</span></h1>
+        <p class="game-subtitle">OPERACIÓN: PROTOCOLO ASALTO NEÓN</p>
+        
+        <div class="menu-actions">
+          <button id="btn-play" class="btn-tech primary">▶ INICIAR OPERACIÓN</button>
+          <button id="btn-controls" class="btn-tech">⚙ CONTROLES</button>
+          <button id="btn-scores" class="btn-tech">🏆 RANKING TOP 10</button>
+          <button id="btn-credits" class="btn-tech">ℹ CRÉDITOS</button>
+        </div>
+        <div class="terminal-footer">
+          DESARROLLADO CON NODE.JS + CANVAS HTML5 + WEB AUDIO SINTÉTICO
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Controles -->
+    <div id="controls-screen" class="ui-screen hidden">
+      <div class="ui-modal terminal-frame large">
+        <h2>MANUAL TÁCTICO // CONTROLES</h2>
+        <div class="controls-grid">
+          <div class="control-card">
+            <span class="key-badge">A / D</span> o <span class="key-badge">← / →</span>
+            <p>Movimiento Lateral</p>
+          </div>
+          <div class="control-card">
+            <span class="key-badge">W / ESPACIO</span> o <span class="key-badge">↑</span>
+            <p>Salto Variable / Impulso</p>
+          </div>
+          <div class="control-card">
+            <span class="key-badge">S</span> o <span class="key-badge">↓</span>
+            <p>Agacharse / Cobertura</p>
+          </div>
+          <div class="control-card">
+            <span class="key-badge">MOUSE</span>
+            <p>Apuntar Retícula 360°</p>
+          </div>
+          <div class="control-card">
+            <span class="key-badge">CLIC IZQUIERDO</span>
+            <p>Disparo Principal</p>
+          </div>
+          <div class="control-card">
+            <span class="key-badge">R</span>
+            <p>Recargar Munición</p>
+          </div>
+          <div class="control-card">
+            <span class="key-badge">1 - 5 / RUEDA MOUSE</span>
+            <p>Cambiar Armamento</p>
+          </div>
+          <div class="control-card">
+            <span class="key-badge">ESC</span>
+            <p>Pausa Táctica</p>
+          </div>
+        </div>
+        <button id="btn-back-controls" class="btn-tech">VOLVER AL MENÚ</button>
+      </div>
+    </div>
+
+    <!-- Modal de Ranking -->
+    <div id="scores-screen" class="ui-screen hidden">
+      <div class="ui-modal terminal-frame large">
+        <h2>REGISTRO DE ÉLITE // TOP 10</h2>
+        <div class="scores-table-wrapper">
+          <table class="tech-table">
+            <thead>
+              <tr>
+                <th>RANGO</th>
+                <th>AGENTE</th>
+                <th>PUNTOS</th>
+                <th>MISIÓN</th>
+                <th>FECHA</th>
+              </tr>
+            </thead>
+            <tbody id="scores-table-body">
+              <tr><td colspan="5" class="loading-cell">Conectando a base de datos de comando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <button id="btn-back-scores" class="btn-tech">VOLVER AL MENÚ</button>
+      </div>
+    </div>
+
+    <!-- Modal de Pausa -->
+    <div id="pause-screen" class="ui-screen hidden">
+      <div class="ui-modal terminal-frame">
+        <h2>PAUSA TÁCTICA</h2>
+        <p>Operación en espera de comandos del operador.</p>
+        <div class="menu-actions">
+          <button id="btn-resume" class="btn-tech primary">CONTINUAR MISIÓN</button>
+          <button id="btn-restart-pause" class="btn-tech">REINICIAR SECTOR</button>
+          <button id="btn-quit-menu" class="btn-tech danger">ABANDONAR AL MENÚ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Game Over -->
+    <div id="gameover-screen" class="ui-screen hidden">
+      <div class="ui-modal terminal-frame danger-mode">
+        <h2 class="danger-title">OPERADOR CAÍDO EN COMBATE</h2>
+        <p>Se han agotado todas las reservas de clones y energía vital.</p>
+        
+        <div class="stats-summary">
+          <div>Puntaje Final: <span id="gameover-score" class="accent-orange">0</span></div>
+          <div>Sector Alcanzado: <span id="gameover-level" class="accent-orange">1</span></div>
+        </div>
+
+        <!-- Formulario de Guardado de Puntuación Real -->
+        <form id="save-score-form" class="save-score-form">
+          <label for="player-name-input">Identificación de Agente (Máx 15 car.):</label>
+          <div class="form-row">
+            <input type="text" id="player-name-input" maxlength="15" placeholder="CODIGO_AGENTE" required autocomplete="off">
+            <button type="submit" id="btn-save-score" class="btn-tech accent">GUARDAR RECORD</button>
+          </div>
+          <div id="save-score-feedback" class="feedback-msg"></div>
+        </form>
+
+        <div class="menu-actions">
+          <button id="btn-retry" class="btn-tech primary">REINTENTAR MISIÓN</button>
+          <button id="btn-gameover-menu" class="btn-tech">VOLVER AL MENÚ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Victoria Final -->
+    <div id="victory-screen" class="ui-screen hidden">
+      <div class="ui-modal terminal-frame victory-mode">
+        <h2 class="victory-title">¡MISIÓN CUMPLIDA! SECTOR PACIFICADO</h2>
+        <p>Has eliminado todas las amenazas hostiles y completado la campaña.</p>
+        
+        <div class="stats-summary">
+          <div>Puntaje Total de Operación: <span id="victory-score" class="accent-cyan">0</span></div>
+        </div>
+
+        <form id="victory-score-form" class="save-score-form">
+          <label for="victory-name-input">Inscribir en el Salón de Honor:</label>
+          <div class="form-row">
+            <input type="text" id="victory-name-input" maxlength="15" placeholder="AGENTE_ELITE" required autocomplete="off">
+            <button type="submit" id="btn-victory-save" class="btn-tech primary">TRANSMITIR PUNTOS</button>
+          </div>
+          <div id="victory-score-feedback" class="feedback-msg"></div>
+        </form>
+
+        <div class="menu-actions">
+          <button id="btn-victory-menu" class="btn-tech primary">VOLVER AL MENÚ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Créditos -->
+    <div id="credits-screen" class="ui-screen hidden">
+      <div class="ui-modal terminal-frame">
+        <h2>REGISTRO DE DESARROLLO</h2>
+        <p><strong>CYBER COMMANDO 2D</strong></p>
+        <p>Arquitectura de Software y Código Completo sin Mocks.</p>
+        <p>Motor gráfico: Canvas HTML5 60 FPS Procedural.</p>
+        <p>Audio: Web Audio API Sintetizado en tiempo real.</p>
+        <p>Backend: Node.js + Express + Persistencia JSON Atómica.</p>
+        <button id="btn-back-credits" class="btn-tech">VOLVER</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Carga del juego mediante módulos ES nativos -->
+  <script type="module" src="js/main.js?v=5"></script>
+</body>
+</html>

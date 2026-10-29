@@ -1,0 +1,32 @@
+[
+  {
+    "name": "COMMANDER_X",
+    "score": 15400,
+    "level": 3,
+    "date": "2026-10-20T18:00:00.000Z"
+  },
+  {
+    "name": "CYBER_GHOST",
+    "score": 11200,
+    "level": 3,
+    "date": "2026-10-21T12:30:00.000Z"
+  },
+  {
+    "name": "VANGUARD_01",
+    "score": 8500,
+    "level": 2,
+    "date": "2026-10-22T09:15:00.000Z"
+  },
+  {
+    "name": "REAPER_CORP",
+    "score": 6200,
+    "level": 2,
+    "date": "2026-10-22T21:40:00.000Z"
+  },
+  {
+    "name": "NEO_RECRUIT",
+    "score": 3100,
+    "level": 1,
+    "date": "2026-10-23T08:00:00.000Z"
+  }
+]
