@@ -3,12 +3,12 @@
  * Administra el ciclo de vida, estados del juego, inputs, físicas, colisiones de combate y persistencia API.
  */
 
-import { sound } from './audio.js?v=5';
-import { Player } from './player.js?v=5';
-import { WeaponManager } from './weapons.js?v=5';
-import { TacticalMap } from './level.js?v=5';
-import { EnemyManager } from './enemy.js?v=5';
-import { ParticleSystem } from './particles.js?v=5';
+import { sound } from './audio.js?v=6';
+import { Player } from './player.js?v=6';
+import { WeaponManager } from './weapons.js?v=6';
+import { TacticalMap } from './level.js?v=6';
+import { EnemyManager } from './enemy.js?v=6';
+import { ParticleSystem } from './particles.js?v=6';
 
 export const GameState = {
   MENU: 'MENU',

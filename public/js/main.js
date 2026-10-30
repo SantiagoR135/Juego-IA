@@ -3,7 +3,7 @@
  * Instancia el motor de juego y prepara los manejadores globales del DOM.
  */
 
-import { GameEngine } from './game.js?v=5';
+import { GameEngine } from './game.js?v=6';
 
 window.addEventListener('DOMContentLoaded', () => {
   const engine = new GameEngine('gameCanvas');

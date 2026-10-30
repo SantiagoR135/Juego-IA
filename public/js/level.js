@@ -6,80 +6,809 @@
 import { sound } from './audio.js?v=4';
 
 export class Platform {
-  constructor(x, y, w, h, type = 'solid', themeColor = '#00f0ff') {
+  constructor(x, y, w, h, type = 'solid', themeColor = '#00f0ff', sector = null) {
     this.x = x;
     this.y = y;
     this.w = w;
     this.h = h;
     this.type = type; // 'solid', 'oneway', 'hazard'
     this.themeColor = themeColor;
+
+    // Determinación precisa del sector militar (1: Trincheras, 2: Refinería, 3: Laboratorio, 4: Ciudadela)
+    if (sector && sector >= 1 && sector <= 4) {
+      this.sector = sector;
+    } else if (themeColor === '#bd00ff') {
+      this.sector = 2;
+    } else if (themeColor === '#00ff77') {
+      this.sector = 3;
+    } else if (themeColor === '#ff1a40' || themeColor === '#ff3300') {
+      this.sector = 4;
+    } else {
+      this.sector = 1;
+    }
+
+    // Suelo principal vs plataforma táctica suspendida
+    this.isGround = y >= 550 && w > 800;
+    // Semilla pseudoaleatoria determinista para distribuir remaches, sacos de arena y detalles
+    this.seed = Math.abs(Math.sin(x * 12.9898 + y * 78.233)) * 43758.5453;
   }
 
   draw(ctx) {
+    const time = Date.now();
+
     ctx.save();
-
-    if (this.type === 'solid') {
-      // Bloque blindado pixel art con remaches y acabado de acero
-      ctx.fillStyle = '#080c14';
-      ctx.fillRect(this.x, this.y, this.w, this.h);
-
-      // Franja superior de metal estriado con color temático
-      ctx.fillStyle = '#111924';
-      ctx.fillRect(this.x, this.y, this.w, 8);
-      ctx.strokeStyle = this.themeColor;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(this.x, this.y, this.w, this.h);
-
-      // Remaches y textura industrial pixelada
-      ctx.fillStyle = this.themeColor;
-      for (let rx = this.x + 8; rx < this.x + this.w; rx += 32) {
-        ctx.fillRect(rx, this.y + 4, 3, 3);
-      }
-
-      // Rayas diagonales de advertencia en plataformas clave
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.lineWidth = 1;
-      const step = 24;
-      for (let offset = -this.h; offset < this.w; offset += step) {
-        ctx.beginPath();
-        ctx.moveTo(this.x + offset, this.y + this.h);
-        ctx.lineTo(this.x + offset + this.h, this.y);
-        ctx.stroke();
-      }
+    if (this.type === 'hazard') {
+      this.drawHazard(ctx, time);
     } else if (this.type === 'oneway') {
-      // Pasarela industrial pixel-art suspendida
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.fillRect(this.x, this.y, this.w, this.h);
+      this.drawOneway(ctx, time);
+    } else {
+      // solid
+      if (this.isGround) {
+        this.drawGround(ctx, time);
+      } else {
+        this.drawElevatedSolid(ctx, time);
+      }
+    }
+    ctx.restore();
+  }
 
-      ctx.strokeStyle = this.themeColor;
-      ctx.lineWidth = 2;
+  // =========================================================================
+  // 1. SUELO CONTINUO (GROUND) CON CAPAS TEMÁTICAS SEGÚN CADA SECTOR
+  // =========================================================================
+  drawGround(ctx, time) {
+    const { x, y, w, h } = this;
+
+    if (this.sector === 1) {
+      // ---------------------------------------------------------------------
+      // SECTOR 1: SUELO DE TRINCHERA MILITAR Y CAMPO DE BATALLA
+      // ---------------------------------------------------------------------
+      // Capa geológica base profunda
+      const grad = ctx.createLinearGradient(x, y, x, y + h);
+      grad.addColorStop(0, '#10161f');
+      grad.addColorStop(0.3, '#0b0f15');
+      grad.addColorStop(1, '#05070a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
+
+      // Borde de trinchera superior: tablones de madera reforzada y barro compactado
+      ctx.fillStyle = '#1c242e';
+      ctx.fillRect(x, y, w, 14);
+      ctx.fillStyle = '#2d3b4b';
+      ctx.fillRect(x, y, w, 3); // Reborde superior metálico
+
+      // Conducto de combustible militar blindado que corre horizontalmente
+      ctx.fillStyle = '#0a1017';
+      ctx.fillRect(x, y + 26, w, 10);
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(this.x, this.y);
-      ctx.lineTo(this.x + this.w, this.y);
+      ctx.moveTo(x, y + 26);
+      ctx.lineTo(x + w, y + 26);
       ctx.stroke();
 
-      // Malla perforada
-      ctx.fillStyle = this.themeColor;
-      for (let dotX = this.x + 6; dotX < this.x + this.w; dotX += 14) {
-        ctx.fillRect(dotX, this.y + 3, 4, 3);
+      // Abrazaderas del conducto y remaches militares
+      ctx.fillStyle = '#00f0ff';
+      for (let cx = x + 20; cx < x + w; cx += 64) {
+        ctx.fillRect(cx, y + 24, 6, 14);
       }
-    } else if (this.type === 'hazard') {
-      // Fosa o barrera de energía láser de alto voltaje
-      const pulse = (Math.sin(Date.now() / 140) + 1) / 2;
-      ctx.fillStyle = `rgba(255, 26, 64, ${0.35 + pulse * 0.45})`;
-      ctx.fillRect(this.x, this.y, this.w, this.h);
 
-      ctx.strokeStyle = '#ff1a40';
-      ctx.shadowColor = '#ff1a40';
-      ctx.shadowBlur = 12;
+      // Sacos de arena tácticos distribuidos sobre la trinchera
+      ctx.fillStyle = '#6e6244';
+      ctx.strokeStyle = '#443c27';
+      ctx.lineWidth = 1.5;
+      for (let sx = x + 30; sx < x + w; sx += 96) {
+        // Pila de 3 sacos de arena
+        this.drawSandbag(ctx, sx, y - 6, 24, 8);
+        this.drawSandbag(ctx, sx + 22, y - 6, 24, 8);
+        this.drawSandbag(ctx, sx + 11, y - 13, 22, 8);
+      }
+
+      // Postes y estacas de trinchera
+      ctx.fillStyle = '#221911';
+      for (let px = x + 60; px < x + w; px += 160) {
+        ctx.fillRect(px, y - 14, 6, 28);
+      }
+
+    } else if (this.sector === 2) {
+      // ---------------------------------------------------------------------
+      // SECTOR 2: SUELO DE REFINERÍA NEÓN CON TUBERÍAS DE PLASMA EXPUESTAS
+      // ---------------------------------------------------------------------
+      const grad = ctx.createLinearGradient(x, y, x, y + h);
+      grad.addColorStop(0, '#110e1c');
+      grad.addColorStop(0.4, '#0a0812');
+      grad.addColorStop(1, '#040307');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
+
+      // Franja de peligro industrial (Hazard Chevron) amarillo y negro
+      this.drawHazardStripes(ctx, x, y, w, 10);
+
+      // Planchas de acero corrugado
+      ctx.strokeStyle = 'rgba(189, 0, 255, 0.2)';
       ctx.lineWidth = 2;
-      ctx.strokeRect(this.x, this.y, this.w, this.h);
+      for (let px = x + 40; px < x + w; px += 120) {
+        ctx.strokeRect(px, y + 14, 110, h - 20);
+        // Remaches hexagonales
+        ctx.fillStyle = '#bd00ff';
+        ctx.fillRect(px + 4, y + 18, 3, 3);
+        ctx.fillRect(px + 102, y + 18, 3, 3);
+      }
 
-      // Rayos de plasma internos
-      ctx.fillStyle = '#ffff66';
-      ctx.fillRect(this.x + 2, this.y + this.h / 2 - 2, this.w - 4, 4);
+      // Tubería de plasma subterránea iluminada visible
+      const pipeY = y + 36;
+      ctx.fillStyle = '#080510';
+      ctx.fillRect(x, pipeY, w, 14);
+
+      // Fluido de plasma magenta pulsante
+      const pulse = (Math.sin(time / 200) + 1) / 2;
+      ctx.fillStyle = `rgba(189, 0, 255, ${0.6 + pulse * 0.35})`;
+      ctx.shadowColor = '#bd00ff';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(x, pipeY + 3, w, 8);
+      ctx.shadowBlur = 0;
+
+      // Anillos de refuerzo de la tubería
+      ctx.fillStyle = '#ffd200';
+      for (let rx = x + 30; rx < x + w; rx += 70) {
+        ctx.fillRect(rx, pipeY - 2, 8, 18);
+      }
+
+      // Rejillas de drenaje de vapor
+      ctx.fillStyle = '#000000';
+      for (let gx = x + 80; gx < x + w; gx += 160) {
+        for (let s = 0; s < 5; s++) {
+          ctx.fillRect(gx + s * 6, y + 14, 3, 16);
+        }
+      }
+
+    } else if (this.sector === 3) {
+      // ---------------------------------------------------------------------
+      // SECTOR 3: SUELO DE LABORATORIO CIBERNÉTICO SUPERCONDUCTOR
+      // ---------------------------------------------------------------------
+      const grad = ctx.createLinearGradient(x, y, x, y + h);
+      grad.addColorStop(0, '#101d28');
+      grad.addColorStop(0.3, '#09121a');
+      grad.addColorStop(1, '#03070b');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
+
+      // Borde de aleación pulida con línea de superconductor esmeralda
+      ctx.fillStyle = '#1e3345';
+      ctx.fillRect(x, y, w, 12);
+      ctx.fillStyle = '#00ff77';
+      ctx.shadowColor = '#00ff77';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(x, y, w, 3);
+      ctx.shadowBlur = 0;
+
+      // Baldosas de laboratorio de alta tecnología
+      ctx.strokeStyle = 'rgba(0, 255, 119, 0.15)';
+      ctx.lineWidth = 1;
+      for (let tx = x; tx < x + w; tx += 80) {
+        ctx.strokeRect(tx, y + 12, 80, 40);
+        ctx.strokeRect(tx + 40, y + 52, 80, 40);
+      }
+
+      // Pistas de circuito impreso (PCB Data Bus) con pulsos de datos móviles
+      ctx.strokeStyle = '#00ffaa';
+      ctx.lineWidth = 2;
+      const busY = y + 32;
+      ctx.beginPath();
+      ctx.moveTo(x, busY);
+      ctx.lineTo(x + w, busY);
+      ctx.stroke();
+
+      // Paquetes de datos viajando a lo largo del bus
+      const dataOffset = (time * 0.12) % 180;
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#00ffaa';
+      ctx.shadowBlur = 10;
+      for (let dx = x + dataOffset; dx < x + w; dx += 180) {
+        ctx.fillRect(dx, busY - 3, 14, 8);
+        ctx.fillStyle = '#00ff77';
+        ctx.fillRect(dx + 3, busY - 1, 8, 4);
+      }
+      ctx.shadowBlur = 0;
+
+    } else {
+      // ---------------------------------------------------------------------
+      // SECTOR 4: CIUDADELA NEGRA Y LECHO VOLCÁNICO DEL TITÁN
+      // ---------------------------------------------------------------------
+      const grad = ctx.createLinearGradient(x, y, x, y + h);
+      grad.addColorStop(0, '#180709');
+      grad.addColorStop(0.3, '#0d0305');
+      grad.addColorStop(1, '#050102');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
+
+      // Borde de basalto volcánico con roca agrietada
+      ctx.fillStyle = '#260a0f';
+      ctx.fillRect(x, y, w, 14);
+      ctx.fillStyle = '#ff1a40';
+      ctx.shadowColor = '#ff1a40';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(x, y, w, 2);
+      ctx.shadowBlur = 0;
+
+      // Fisuras profundas de magma líquido pulsante
+      const magmaPulse = (Math.sin(time / 160) + 1) / 2;
+      ctx.strokeStyle = '#ff3300';
+      ctx.shadowColor = '#ff5500';
+      ctx.shadowBlur = 12;
+      ctx.lineWidth = 3;
+
+      for (let fx = x + 40; fx < x + w; fx += 140) {
+        ctx.beginPath();
+        ctx.moveTo(fx, y + 14);
+        ctx.lineTo(fx + 25, y + 35);
+        ctx.lineTo(fx + 55, y + 42);
+        ctx.lineTo(fx + 90, y + 65);
+        ctx.stroke();
+
+        // Núcleo amarillo hirviente de la fisura
+        ctx.fillStyle = `rgba(255, 230, 80, ${0.7 + magmaPulse * 0.3})`;
+        ctx.fillRect(fx + 22, y + 33, 8, 5);
+        ctx.fillRect(fx + 52, y + 40, 8, 5);
+      }
+      ctx.shadowBlur = 0;
+
+      // Contrafuertes de aleación negra angular de la fortaleza
+      ctx.fillStyle = '#140507';
+      ctx.strokeStyle = '#4a0e16';
+      ctx.lineWidth = 2;
+      for (let bx = x + 100; bx < x + w; bx += 200) {
+        ctx.beginPath();
+        ctx.moveTo(bx, y + 14);
+        ctx.lineTo(bx + 40, y + 60);
+        ctx.lineTo(bx - 40, y + 60);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+  }
+
+  // =========================================================================
+  // 2. PLATAFORMAS SÓLIDAS ELEVADAS CON SOPORTES ESTRUCTURALES Y DETALLES
+  // =========================================================================
+  drawElevatedSolid(ctx, time) {
+    const { x, y, w, h } = this;
+
+    // -----------------------------------------------------------------------
+    // A. SOPORTES INFERIORES: Evita que floten como rectángulos mágicos
+    // -----------------------------------------------------------------------
+    if (this.sector === 1) {
+      // Vigas de acero en I militares con tirantes diagonales
+      ctx.strokeStyle = '#1a2432';
+      ctx.lineWidth = 4;
+      const strutStep = Math.min(w - 30, 140);
+      for (let sx = x + 25; sx <= x + w - 25; sx += strutStep) {
+        ctx.beginPath();
+        ctx.moveTo(sx, y + h);
+        ctx.lineTo(sx - 18, y + h + 42);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(sx, y + h);
+        ctx.lineTo(sx + 18, y + h + 42);
+        ctx.stroke();
+
+        // Remaches de soporte
+        ctx.fillStyle = '#00f0ff';
+        ctx.fillRect(sx - 3, y + h + 3, 6, 6);
+      }
+    } else if (this.sector === 2) {
+      // Pistones hidráulicos de aleación con cilindros cromados
+      const pistonStep = Math.min(w - 30, 160);
+      for (let px = x + 30; px <= x + w - 30; px += pistonStep) {
+        // Cilindro exterior
+        ctx.fillStyle = '#161222';
+        ctx.fillRect(px - 7, y + h, 14, 34);
+        ctx.strokeStyle = '#bd00ff';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(px - 7, y + h, 14, 34);
+
+        // Vástago cromado
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(px - 3, y + h + 34, 6, 20);
+
+        // Abrazadera neón
+        ctx.fillStyle = '#bd00ff';
+        ctx.fillRect(px - 9, y + h + 10, 18, 4);
+      }
+    } else if (this.sector === 3) {
+      // Repulsores de levitación antigravitatoria iónicos (con haz emisor)
+      const emitterStep = Math.min(w - 40, 140);
+      const repPulse = (Math.sin(time / 150) + 1) / 2;
+      for (let ex = x + 35; ex <= x + w - 35; ex += emitterStep) {
+        // Cono emisor metálico
+        ctx.fillStyle = '#1e3345';
+        ctx.strokeStyle = '#00ffaa';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(ex - 12, y + h);
+        ctx.lineTo(ex + 12, y + h);
+        ctx.lineTo(ex + 6, y + h + 10);
+        ctx.lineTo(ex - 6, y + h + 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Haz de plasma iónico de sustentación proyectado hacia abajo
+        ctx.fillStyle = `rgba(0, 255, 170, ${0.15 + repPulse * 0.25})`;
+        ctx.beginPath();
+        ctx.moveTo(ex - 6, y + h + 10);
+        ctx.lineTo(ex + 6, y + h + 10);
+        ctx.lineTo(ex + 18, y + h + 45);
+        ctx.lineTo(ex - 18, y + h + 45);
+        ctx.closePath();
+        ctx.fill();
+      }
+    } else {
+      // Sector 4: Contrafuertes angulares de acero negro y púas basálticas
+      ctx.fillStyle = '#140507';
+      ctx.strokeStyle = '#ff1a40';
+      ctx.lineWidth = 1.5;
+      const clawStep = Math.min(w - 30, 140);
+      for (let cx = x + 25; cx <= x + w - 25; cx += clawStep) {
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, y + h);
+        ctx.lineTo(cx + 10, y + h);
+        ctx.lineTo(cx, y + h + 36);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Vena de calor ardiente en la púa
+        ctx.fillStyle = '#ff6600';
+        ctx.fillRect(cx - 2, y + h + 8, 4, 16);
+      }
     }
 
+    // -----------------------------------------------------------------------
+    // B. CUERPO DE LA PLATAFORMA Y DETALLES TEMÁTICOS SUPERFICIALES
+    // -----------------------------------------------------------------------
+    if (this.sector === 1) {
+      // ---------------------------------------------------------------------
+      // SECTOR 1: BÚNKER BLINDADO Y PARAPETO CON SACOS DE ARENA
+      // ---------------------------------------------------------------------
+      // Bloque de hormigón militar reforzado
+      ctx.fillStyle = '#121822';
+      ctx.fillRect(x, y, w, h);
+
+      // Franja superior de acero con bisel
+      ctx.fillStyle = '#1b2636';
+      ctx.fillRect(x, y, w, 6);
+      ctx.strokeStyle = this.themeColor;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+
+      // Remaches dobles militares
+      ctx.fillStyle = this.themeColor;
+      for (let rx = x + 10; rx < x + w; rx += 28) {
+        ctx.fillRect(rx, y + 3, 3, 3);
+        ctx.fillRect(rx, y + h - 5, 3, 3);
+      }
+
+      // Parapetos de sacos de arena en los extremos de la plataforma (cobertura)
+      if (w >= 140) {
+        this.drawSandbag(ctx, x + 4, y - 6, 22, 7);
+        this.drawSandbag(ctx, x + 22, y - 6, 22, 7);
+        this.drawSandbag(ctx, x + w - 46, y - 6, 22, 7);
+        this.drawSandbag(ctx, x + w - 26, y - 6, 22, 7);
+      }
+
+      // Alambre de púas táctico en la base inferior
+      ctx.strokeStyle = '#607282';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + 10, y + h - 2);
+      ctx.lineTo(x + w - 10, y + h - 2);
+      ctx.stroke();
+      for (let bx = x + 24; bx < x + w - 10; bx += 32) {
+        ctx.beginPath();
+        ctx.moveTo(bx - 3, y + h - 6);
+        ctx.lineTo(bx + 3, y + h + 2);
+        ctx.moveTo(bx - 3, y + h + 2);
+        ctx.lineTo(bx + 3, y + h - 6);
+        ctx.stroke();
+      }
+
+      // Estarcido militar en plataformas anchas
+      if (w >= 220) {
+        ctx.fillStyle = 'rgba(0, 240, 255, 0.4)';
+        ctx.font = 'bold 9px "Share Tech Mono", monospace';
+        ctx.fillText('[BUNKER-MIL]', x + w / 2 - 32, y + h / 2 + 3);
+      }
+
+    } else if (this.sector === 2) {
+      // ---------------------------------------------------------------------
+      // SECTOR 2: MÓDULO INDUSTRIAL CON TUBERÍA DE PLASMA LUMINOSA
+      // ---------------------------------------------------------------------
+      ctx.fillStyle = '#0f0c18';
+      ctx.fillRect(x, y, w, h);
+
+      // Franja de advertencia industrial amarilla/negra (Hazard Chevron)
+      this.drawHazardStripes(ctx, x, y, w, 6);
+
+      ctx.strokeStyle = this.themeColor;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+
+      // Tubería cilíndrica de vidrio con plasma magenta fluyendo en el centro
+      const tubeY = y + Math.floor(h / 2) - 3;
+      const tubeH = 6;
+      ctx.fillStyle = '#06040a';
+      ctx.fillRect(x + 8, tubeY - 1, w - 16, tubeH + 2);
+
+      const plasmaPulse = (Math.sin(time / 180 + x * 0.01) + 1) / 2;
+      ctx.fillStyle = `rgba(189, 0, 255, ${0.7 + plasmaPulse * 0.3})`;
+      ctx.shadowColor = '#bd00ff';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(x + 10, tubeY, w - 20, tubeH);
+      ctx.shadowBlur = 0;
+
+      // Abrazaderas metálicas doradas de la tubería
+      ctx.fillStyle = '#ffd200';
+      for (let bx = x + 24; bx < x + w - 20; bx += 48) {
+        ctx.fillRect(bx, tubeY - 3, 6, tubeH + 6);
+      }
+
+      // Manómetro de presión analógico en plataformas grandes
+      if (w >= 240) {
+        const mx = x + w - 30;
+        const my = y + h / 2;
+        ctx.fillStyle = '#1c152a';
+        ctx.beginPath();
+        ctx.arc(mx, my, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffd200';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Aguja indicadora roja
+        const angle = (time * 0.003) % (Math.PI * 1.5);
+        ctx.strokeStyle = '#ff1a40';
+        ctx.beginPath();
+        ctx.moveTo(mx, my);
+        ctx.lineTo(mx + Math.cos(angle) * 5, my + Math.sin(angle) * 5);
+        ctx.stroke();
+      }
+
+    } else if (this.sector === 3) {
+      // ---------------------------------------------------------------------
+      // SECTOR 3: PLATAFORMA DE ALEACIÓN ESPACIAL Y NÚCLEO IÓNICO
+      // ---------------------------------------------------------------------
+      ctx.fillStyle = '#101c29';
+      ctx.fillRect(x, y, w, h);
+
+      // Franja de superconductor esmeralda superior
+      ctx.fillStyle = '#00ff77';
+      ctx.shadowColor = '#00ff77';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(x, y, w, 4);
+      ctx.shadowBlur = 0;
+
+      ctx.strokeStyle = '#00ffaa';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+
+      // Pistas de bus de datos iluminadas
+      ctx.strokeStyle = 'rgba(0, 255, 170, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + 10, y + h / 2);
+      ctx.lineTo(x + w - 10, y + h / 2);
+      ctx.stroke();
+
+      // Nodos de interconexión con LED parpadeantes
+      ctx.fillStyle = '#00ff77';
+      for (let nx = x + 20; nx < x + w - 10; nx += 36) {
+        ctx.fillRect(nx, y + h / 2 - 2, 4, 4);
+      }
+
+      // Núcleo de cristal de contención de iones en el centro
+      const coreX = x + w / 2;
+      const coreY = y + h / 2;
+      const corePulse = (Math.sin(time / 140) + 1) / 2;
+
+      ctx.fillStyle = '#06131c';
+      ctx.fillRect(coreX - 16, y + 5, 32, h - 10);
+      ctx.strokeStyle = '#00ff77';
+      ctx.strokeRect(coreX - 16, y + 5, 32, h - 10);
+
+      ctx.fillStyle = `rgba(0, 255, 170, ${0.6 + corePulse * 0.4})`;
+      ctx.shadowColor = '#00ff77';
+      ctx.shadowBlur = 12;
+      ctx.fillRect(coreX - 12, y + 7, 24, h - 14);
+      ctx.shadowBlur = 0;
+
+    } else {
+      // ---------------------------------------------------------------------
+      // SECTOR 4: BASTIÓN DE OBSIDIANA NEGRA Y GRIETAS DE MAGMA ARDIENTE
+      // ---------------------------------------------------------------------
+      ctx.fillStyle = '#120508';
+      ctx.fillRect(x, y, w, h);
+
+      // Borde de acero fundido carmesí
+      ctx.fillStyle = '#ff1a40';
+      ctx.shadowColor = '#ff1a40';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(x, y, w, 4);
+      ctx.shadowBlur = 0;
+
+      ctx.strokeStyle = '#5a121c';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+
+      // Fisuras incandescentes de magma talladas en la plataforma
+      const crackPulse = (Math.sin(time / 160 + x) + 1) / 2;
+      ctx.strokeStyle = `rgba(255, 68, 0, ${0.7 + crackPulse * 0.3})`;
+      ctx.shadowColor = '#ff4400';
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.moveTo(x + 16, y + 6);
+      ctx.lineTo(x + 40, y + h - 5);
+      ctx.lineTo(x + 75, y + 8);
+      ctx.lineTo(x + 110, y + h - 6);
+      ctx.stroke();
+
+      if (w >= 200) {
+        ctx.beginPath();
+        ctx.moveTo(x + w - 120, y + 8);
+        ctx.lineTo(x + w - 85, y + h - 6);
+        ctx.lineTo(x + w - 50, y + 7);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+
+      // Disipadores térmicos al rojo vivo
+      ctx.fillStyle = '#ff6600';
+      for (let dx = x + 18; dx < x + w - 15; dx += 24) {
+        ctx.fillRect(dx, y + h - 4, 10, 3);
+      }
+    }
+  }
+
+  // =========================================================================
+  // 3. PASARELAS ATRAVESABLES (ONEWAY PLATFORMS) ESTILIZADAS POR SECTOR
+  // =========================================================================
+  drawOneway(ctx, time) {
+    const { x, y, w, h } = this;
+
+    if (this.sector === 1) {
+      // SECTOR 1: Pasarela de rejilla militar de acero con tensores
+      ctx.fillStyle = 'rgba(16, 24, 34, 0.85)';
+      ctx.fillRect(x, y, w, h);
+
+      // Borde superior estriado
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w, y);
+      ctx.stroke();
+
+      // Malla romboidal de metal desplegado
+      ctx.fillStyle = '#00f0ff';
+      for (let dotX = x + 8; dotX < x + w; dotX += 16) {
+        ctx.fillRect(dotX, y + 3, 5, 3);
+        ctx.fillRect(dotX + 8, y + 8, 5, 3);
+      }
+
+      // Postes y tensores de anclaje en extremos
+      ctx.fillStyle = '#223244';
+      ctx.fillRect(x, y - 6, 6, h + 10);
+      ctx.fillRect(x + w - 6, y - 6, 6, h + 10);
+
+    } else if (this.sector === 2) {
+      // SECTOR 2: Pasarela de refinería con halo neón púrpura y balizas
+      const pulse = (Math.sin(time / 200) + 1) / 2;
+      ctx.fillStyle = 'rgba(20, 14, 30, 0.88)';
+      ctx.fillRect(x, y, w, h);
+
+      // Halo inferior neón
+      ctx.strokeStyle = `rgba(189, 0, 255, ${0.6 + pulse * 0.4})`;
+      ctx.shadowColor = '#bd00ff';
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y + 1);
+      ctx.lineTo(x + w, y + 1);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Rejilla de alta resistencia
+      ctx.fillStyle = '#bd00ff';
+      for (let rx = x + 6; rx < x + w; rx += 14) {
+        ctx.fillRect(rx, y + 4, 6, 2);
+        ctx.fillRect(rx + 3, y + 8, 6, 2);
+      }
+
+      // Balizas de señalización en los extremos
+      ctx.fillStyle = pulse > 0.5 ? '#ffd200' : '#bd00ff';
+      ctx.fillRect(x + 2, y - 5, 5, 5);
+      ctx.fillRect(x + w - 7, y - 5, 5, 5);
+
+    } else if (this.sector === 3) {
+      // SECTOR 3: Pasarela holográfica de cristal de sílice blindado
+      const pulse = (Math.sin(time / 160) + 1) / 2;
+      ctx.fillStyle = `rgba(0, 255, 119, ${0.12 + pulse * 0.08})`;
+      ctx.fillRect(x, y, w, h);
+
+      // Rayo láser de contención superficial
+      ctx.strokeStyle = '#00ffaa';
+      ctx.shadowColor = '#00ffaa';
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w, y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Cuadrícula holográfica
+      ctx.strokeStyle = 'rgba(0, 255, 170, 0.25)';
+      ctx.lineWidth = 1;
+      for (let hx = x + 12; hx < x + w; hx += 20) {
+        ctx.beginPath();
+        ctx.moveTo(hx, y);
+        ctx.lineTo(hx + 8, y + h);
+        ctx.stroke();
+      }
+
+      // Proyectores ópticos en extremos
+      ctx.fillStyle = '#00ff77';
+      ctx.fillRect(x, y - 4, 4, 8);
+      ctx.fillRect(x + w - 4, y - 4, 4, 8);
+
+    } else {
+      // SECTOR 4: Pasarela forjada de la Ciudadela con bordes al rojo vivo
+      ctx.fillStyle = 'rgba(24, 7, 10, 0.9)';
+      ctx.fillRect(x, y, w, h);
+
+      // Borde al rojo vivo
+      ctx.strokeStyle = '#ff3300';
+      ctx.shadowColor = '#ff4400';
+      ctx.shadowBlur = 12;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w, y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Rejilla de hierro forjado negro
+      ctx.fillStyle = '#ff5500';
+      for (let fx = x + 8; fx < x + w; fx += 18) {
+        ctx.fillRect(fx, y + 4, 8, 3);
+      }
+
+      // Cadenas de suspensión en extremos
+      ctx.fillStyle = '#3a0f15';
+      ctx.fillRect(x + 2, y - 10, 5, 12);
+      ctx.fillRect(x + w - 7, y - 10, 5, 12);
+    }
+  }
+
+  // =========================================================================
+  // 4. ZONAS DE PELIGRO (HAZARDS) ANIMADAS POR SECTOR
+  // =========================================================================
+  drawHazard(ctx, time) {
+    const { x, y, w, h } = this;
+    const pulse = (Math.sin(time / 130) + 1) / 2;
+
+    if (this.sector === 2) {
+      // Fosa de ácido químico / plasma tóxico violeta hirviendo
+      ctx.fillStyle = `rgba(189, 0, 255, ${0.45 + pulse * 0.4})`;
+      ctx.fillRect(x, y, w, h);
+
+      ctx.strokeStyle = '#bd00ff';
+      ctx.shadowColor = '#bd00ff';
+      ctx.shadowBlur = 14;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+
+      // Olas químicas superficiales
+      ctx.fillStyle = '#ff00aa';
+      for (let ox = x + 6; ox < x + w; ox += 20) {
+        const waveY = y + Math.sin(time * 0.008 + ox * 0.1) * 4;
+        ctx.beginPath();
+        ctx.arc(ox, waveY + 4, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+
+    } else if (this.sector === 3) {
+      // Barrera de rayos láser de contención electromagnética
+      ctx.fillStyle = `rgba(0, 255, 119, ${0.25 + pulse * 0.35})`;
+      ctx.fillRect(x, y, w, h);
+
+      ctx.strokeStyle = '#00ff77';
+      ctx.shadowColor = '#00ff77';
+      ctx.shadowBlur = 14;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+
+      // Haces de energía de alta frecuencia oscilantes
+      const laserY = y + h / 2 + Math.sin(time * 0.02) * 4;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + 2, laserY - 2, w - 4, 4);
+      ctx.shadowBlur = 0;
+
+    } else {
+      // Sector 4 y 1: Caldera de magma / fosa de lava ardiente
+      ctx.fillStyle = `rgba(255, 34, 0, ${0.5 + pulse * 0.45})`;
+      ctx.fillRect(x, y, w, h);
+
+      ctx.strokeStyle = '#ff3300';
+      ctx.shadowColor = '#ff3300';
+      ctx.shadowBlur = 16;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+
+      // Superficie dorada incandescente
+      ctx.fillStyle = '#ffff44';
+      ctx.fillRect(x + 2, y + 2, w - 4, 4);
+
+      // Burbujas de lava hirviendo
+      ctx.fillStyle = '#ffaa00';
+      for (let bx = x + 10; bx < x + w - 10; bx += 32) {
+        const bob = Math.sin(time * 0.006 + bx) * 4;
+        ctx.beginPath();
+        ctx.arc(bx, y + 8 + bob, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  // =========================================================================
+  // UTILIDADES GRÁFICAS AUXILIARES
+  // =========================================================================
+  drawSandbag(ctx, bx, by, bw, bh) {
+    ctx.save();
+    ctx.fillStyle = '#7a6b4a';
+    ctx.strokeStyle = '#4e442d';
+    ctx.lineWidth = 1.2;
+
+    // Saco de arena con esquinas redondeadas
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 3);
+    ctx.fill();
+    ctx.stroke();
+
+    // Costura central de la lona
+    ctx.strokeStyle = '#38301d';
+    ctx.beginPath();
+    ctx.moveTo(bx + 4, by + bh / 2);
+    ctx.lineTo(bx + bw - 4, by + bh / 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawHazardStripes(ctx, sx, sy, sw, sh) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(sx, sy, sw, sh);
+    ctx.clip();
+
+    ctx.fillStyle = '#ffd200'; // Amarillo advertencia
+    ctx.fillRect(sx, sy, sw, sh);
+
+    ctx.fillStyle = '#11141a'; // Negro azabache
+    const stripeWidth = 12;
+    for (let st = sx - sh; st < sx + sw + sh; st += stripeWidth * 2) {
+      ctx.beginPath();
+      ctx.moveTo(st, sy);
+      ctx.lineTo(st + stripeWidth, sy);
+      ctx.lineTo(st + stripeWidth - sh, sy + sh);
+      ctx.lineTo(st - sh, sy + sh);
+      ctx.closePath();
+      ctx.fill();
+    }
     ctx.restore();
   }
 }
